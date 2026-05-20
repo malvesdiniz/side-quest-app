@@ -19,15 +19,22 @@ import { Participant } from '../../core/models/participant.model';
       <!-- Add form -->
       <div class="sq-card" style="margin-bottom:28px">
         <div class="sq-label">Add participant</div>
-        @if (error()) { <div class="sq-error">{{ error() }}</div> }
+        @if (error()) {
+          <div class="sq-error">{{ error() }}</div>
+        }
         <div class="pt-row">
           <input
             type="text"
             placeholder="Enter a name…"
             [(ngModel)]="newName"
-            (keydown.enter)="add()" />
+            (keydown.enter)="add()"
+          />
           <button class="sq-btn sq-btn--primary pt-add-btn" (click)="add()" [disabled]="adding()">
-            @if (adding()) { … } @else { + Add }
+            @if (adding()) {
+              …
+            } @else {
+              + Add
+            }
           </button>
         </div>
       </div>
@@ -50,7 +57,7 @@ import { Participant } from '../../core/models/participant.model';
                   <span class="pt-avatar">{{ initials(p.name) }}</span>
                   <div>
                     <div class="pt-name">{{ p.name }}</div>
-                    <div class="pt-date">Joined {{ p.createdAt | date:'mediumDate' }}</div>
+                    <div class="pt-date">Joined {{ p.createdAt | date: 'mediumDate' }}</div>
                   </div>
                 </div>
                 <button class="pt-remove" (click)="remove(p)" title="Remove">✕</button>
@@ -61,59 +68,70 @@ import { Participant } from '../../core/models/participant.model';
       }
     </div>
   `,
-  styles: [`
-    .back-link {
-      display: inline-block;
-      color: var(--text-2);
-      margin-bottom: 20px;
-      font-size: .9rem;
-    }
+  styles: [
+    `
+      .back-link {
+        display: inline-block;
+        color: var(--text-2);
+        margin-bottom: 20px;
+        font-size: 0.9rem;
+      }
 
-    .pt-row {
-      display: flex;
-      gap: 10px;
-      margin-top: 8px;
-    }
+      .pt-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 8px;
+      }
 
-    .pt-add-btn {
-      width: auto;
-      white-space: nowrap;
-      padding: 12px 18px;
-    }
+      .pt-add-btn {
+        width: auto;
+        white-space: nowrap;
+        padding: 12px 18px;
+      }
 
-    .pt-card { padding: 14px 16px; }
+      .pt-card {
+        padding: 14px 16px;
+      }
 
-    .pt-avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: var(--amber-glow);
-      border: 1.5px solid var(--amber-dim);
-      color: var(--amber);
-      font-weight: 700;
-      font-size: .85rem;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
+      .pt-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--amber-glow);
+        border: 1.5px solid var(--amber-dim);
+        color: var(--amber);
+        font-weight: 700;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
 
-    .pt-name { font-weight: 600; }
-    .pt-date { font-size: .78rem; color: var(--text-3); }
+      .pt-name {
+        font-weight: 600;
+      }
+      .pt-date {
+        font-size: 0.78rem;
+        color: var(--text-3);
+      }
 
-    .pt-remove {
-      background: none;
-      color: var(--text-3);
-      font-size: .9rem;
-      padding: 6px 8px;
-      border-radius: var(--radius-sm);
-      transition: color .15s, background .15s;
-    }
-    .pt-remove:hover {
-      color: var(--red);
-      background: var(--red-dim);
-    }
-  `],
+      .pt-remove {
+        background: none;
+        color: var(--text-3);
+        font-size: 0.9rem;
+        padding: 6px 8px;
+        border-radius: var(--radius-sm);
+        transition:
+          color 0.15s,
+          background 0.15s;
+      }
+      .pt-remove:hover {
+        color: var(--red);
+        background: var(--red-dim);
+      }
+    `,
+  ],
 })
 export class ParticipantsComponent implements OnInit {
   groupId!: string;
@@ -141,12 +159,23 @@ export class ParticipantsComponent implements OnInit {
 
   async add() {
     const name = this.newName.trim();
-    if (!name) { this.error.set('Enter a name.'); return; }
+    if (!name) {
+      this.error.set('Enter a name.');
+      return;
+    }
     this.adding.set(true);
     this.error.set('');
     try {
       const id = await this.participantService.addParticipant(this.groupId, name);
-      this.participants.update(list => [...list, { id, name, createdAt: new Date() }]);
+      this.participants.update((list) => [
+        ...list,
+        {
+          id,
+          groupId: this.groupId,
+          name,
+          createdAt: new Date(),
+        },
+      ]);
       this.newName = '';
     } catch (e: any) {
       this.error.set(e?.message ?? 'Failed to add participant.');
@@ -158,10 +187,15 @@ export class ParticipantsComponent implements OnInit {
   async remove(p: Participant) {
     if (!confirm(`Remove ${p.name}?`)) return;
     await this.participantService.removeParticipant(this.groupId, p.id);
-    this.participants.update(list => list.filter(x => x.id !== p.id));
+    this.participants.update((list) => list.filter((x) => x.id !== p.id));
   }
 
   initials(name: string): string {
-    return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    return name
+      .split(' ')
+      .map((w) => w[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   }
 }

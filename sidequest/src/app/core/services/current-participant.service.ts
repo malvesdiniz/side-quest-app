@@ -2,27 +2,30 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { Participant } from '../models/participant.model';
 
-const STORAGE_KEY = 'sidequest_current_participant';
+/**
+ * Returns the sessionStorage key scoped to a specific group.
+ * Using per-group keys means visiting group A and group B in the same
+ * browser session keeps their identities independent.
+ */
+function storageKey(groupId: string): string {
+  return `sidequest_participant_${groupId}`;
+}
 
 /**
- * Manages which participant the current browser session is acting as.
+ * Manages which participant the current browser session is acting as,
+ * scoped per group.
  *
- * Because SideQuest has no auth, identity is stored in sessionStorage so it
- * persists across page reloads within the same tab but is forgotten when the
- * tab is closed. A participant must be selected (or created) each visit.
+ * Identity is stored in sessionStorage so it persists across page reloads
+ * within the same tab but is forgotten when the tab is closed.
  *
- * Usage:
- *   - On group entry: call setCurrentParticipant(participant)
- *   - Everywhere else: inject this service and read currentParticipant$
+ * All public methods require a groupId so the stored value is isolated
+ * per group — visiting two different groups won't overwrite each other.
  */
 @Injectable({ providedIn: 'root' })
 export class CurrentParticipantService {
+  private _current$ = new BehaviorSubject<Participant | null>(null);
 
-  private _current$ = new BehaviorSubject<Participant | null>(
-    this.loadFromStorage(),
-  );
-
-  /** Observable stream of the currently selected participant. */
+  /** Observable stream of the currently active participant for the active group. */
   readonly currentParticipant$ = this._current$.asObservable();
 
   /** Synchronous snapshot — useful in guards and one-shot reads. */
@@ -30,33 +33,60 @@ export class CurrentParticipantService {
     return this._current$.value;
   }
 
-  /** Call this when the user picks their name on the group page. */
-  setCurrentParticipant(participant: Participant): void {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+  // ── Write ─────────────────────────────────────────────────────────────────
+
+  /** Persist and broadcast the chosen participant for a specific group. */
+  setCurrentParticipant(participant: Participant, groupId: string): void {
+    const stored: Record<string, unknown> = {
       id: participant.id,
+      groupId: groupId,
       name: participant.name,
       createdAt: participant.createdAt.toISOString(),
-    }));
-    this._current$.next(participant);
+    };
+
+    if (participant.userId) stored['userId'] = participant.userId;
+    if (participant.email) stored['email'] = participant.email;
+    if (participant.photoUrl) stored['photoUrl'] = participant.photoUrl;
+
+    sessionStorage.setItem(storageKey(groupId), JSON.stringify(stored));
+    this._current$.next({ ...participant, groupId });
   }
 
-  /** Call this to forget the current participant (e.g. "Switch participant"). */
-  clearCurrentParticipant(): void {
-    sessionStorage.removeItem(STORAGE_KEY);
+  /**
+   * Load the stored participant for a group into the active stream.
+   * Call this in the dashboard's ngOnInit so the BehaviorSubject is
+   * populated with the right group's data before auth resolves.
+   * Returns the participant if one was found in storage, otherwise null.
+   */
+  loadForGroup(groupId: string): Participant | null {
+    const participant = this.readFromStorage(groupId);
+    this._current$.next(participant);
+    return participant;
+  }
+
+  /** Forget the current participant for a specific group. */
+  clearCurrentParticipant(groupId: string): void {
+    sessionStorage.removeItem(storageKey(groupId));
     this._current$.next(null);
   }
 
-  // ── Private ──────────────────────────────────────────────────────────────
+  // ── Read ──────────────────────────────────────────────────────────────────
 
-  private loadFromStorage(): Participant | null {
+  private readFromStorage(groupId: string): Participant | null {
     try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
+      const raw = sessionStorage.getItem(storageKey(groupId));
       if (!raw) return null;
-      const parsed = JSON.parse(raw);
+
+      const p = JSON.parse(raw);
+
       return {
-        id: parsed.id,
-        name: parsed.name,
-        createdAt: new Date(parsed.createdAt),
+        id: p.id,
+        groupId: p.groupId ?? groupId,
+        name: p.name,
+        createdAt: new Date(p.createdAt),
+        userId: p.userId ?? undefined,
+        email: p.email ?? undefined,
+        photoUrl: p.photoUrl ?? undefined,
       };
     } catch {
       return null;
