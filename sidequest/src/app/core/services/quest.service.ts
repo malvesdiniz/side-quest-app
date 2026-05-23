@@ -36,6 +36,7 @@ export class QuestService {
       month: d['month'],
       status: d['status'] as QuestStatus,
       proofPhotoUrl: d['proofPhotoUrl'] ?? null,
+      proofPhotoUrls: d['proofPhotoUrls'] ?? undefined,
       completedAt: d['completedAt'] ? toDate(d['completedAt']) : null,
       createdAt: toDate(d['createdAt']),
     };
@@ -108,11 +109,12 @@ export class QuestService {
   async completeQuest(
     groupId: string,
     questId: string,
-    proofPhotoUrl: string,
+    proofPhotoUrls: string[],
   ): Promise<void> {
     await updateDoc(doc(this.col(groupId), questId), {
       status: 'completed' satisfies QuestStatus,
-      proofPhotoUrl,
+      proofPhotoUrl: proofPhotoUrls[0],
+      proofPhotoUrls,
       completedAt: serverTimestamp(),
     });
   }

@@ -9,6 +9,7 @@ export interface Quest {
   month: string;            // format: "YYYY-MM"
   status: QuestStatus;
   proofPhotoUrl: string | null;
+  proofPhotoUrls?: string[];
   completedAt: Date | null;
   createdAt: Date;
 }

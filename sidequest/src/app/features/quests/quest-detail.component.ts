@@ -54,8 +54,17 @@ import { environment } from '../../../environments/environment';
           }
         </div>
 
-        <!-- Proof photo already uploaded -->
-        @if (quest()!.proofPhotoUrl) {
+        <!-- Proof photos already uploaded -->
+        @if (quest()!.proofPhotoUrls && quest()!.proofPhotoUrls!.length > 0) {
+          <div class="qd-proof">
+            <div class="sq-label" style="margin-bottom:10px">Proof photos</div>
+            <div class="qd-proof-grid">
+              @for (url of quest()!.proofPhotoUrls!; track url) {
+                <img [src]="url" class="qd-proof-thumb" alt="Proof" />
+              }
+            </div>
+          </div>
+        } @else if (quest()!.proofPhotoUrl) {
           <div class="qd-proof">
             <div class="sq-label" style="margin-bottom:10px">Proof photo</div>
             <img [src]="quest()!.proofPhotoUrl!" class="qd-proof-img" alt="Proof" />
@@ -71,25 +80,31 @@ import { environment } from '../../../environments/environment';
           @if (uploadSuccess()) { <div class="sq-success">Quest completed! 🎉</div> }
 
           <div class="qd-upload-zone"
-               [class.qd-upload-zone--preview]="previewUrl()"
+               [class.qd-upload-zone--has-files]="selectedFiles().length > 0"
                (click)="fileInput.click()">
-            @if (previewUrl()) {
-              <img [src]="previewUrl()!" class="qd-preview-img" alt="Preview" />
-              <div class="qd-preview-overlay">Tap to change</div>
+            @if (selectedFiles().length > 0) {
+              <div class="qd-preview-grid">
+                @for (url of previewUrls(); track url) {
+                  <img [src]="url" class="qd-preview-thumb" alt="Preview" />
+                }
+              </div>
+              <div class="qd-upload-hint" style="margin-top:10px">
+                {{ selectedFiles().length }} photo{{ selectedFiles().length > 1 ? 's' : '' }} selected · Tap to change
+              </div>
             } @else {
               <div class="qd-upload-icon">📸</div>
-              <div class="qd-upload-label">Tap to select proof photo</div>
-              <div class="qd-upload-hint">JPG, PNG, WEBP — max 10 MB</div>
+              <div class="qd-upload-label">Tap to select proof photos</div>
+              <div class="qd-upload-hint">JPG, PNG, WEBP · up to 5 photos · max 10 MB each</div>
             }
           </div>
-          <input #fileInput type="file" accept="image/*" style="display:none"
+          <input #fileInput type="file" accept="image/*" multiple style="display:none"
                  (change)="onFileSelected($event)" />
 
           <button class="sq-btn sq-btn--primary" style="margin-top:14px"
-                  [disabled]="!selectedFile() || uploading()"
+                  [disabled]="selectedFiles().length === 0 || uploading()"
                   (click)="complete()">
             @if (uploading()) {
-              <span class="qd-upload-progress">{{ uploadProgress() }}%</span>&nbsp;Uploading…
+              Uploading…
             } @else {
               ✅ &nbsp; Submit Proof
             }
@@ -158,6 +173,20 @@ import { environment } from '../../../environments/environment';
       border: 1px solid var(--border);
     }
 
+    .qd-proof-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+    }
+
+    .qd-proof-thumb {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+
     /* Upload zone — default state */
     .qd-upload-zone {
       position: relative;
@@ -174,9 +203,9 @@ import { environment } from '../../../environments/environment';
       background: var(--amber-glow);
     }
 
-    /* Upload zone — preview state */
-    .qd-upload-zone--preview {
-      padding: 0;
+    /* Upload zone — files selected state */
+    .qd-upload-zone--has-files {
+      padding: 16px;
       border-style: solid;
       border-color: var(--border);
     }
@@ -185,30 +214,17 @@ import { environment } from '../../../environments/environment';
     .qd-upload-label { font-weight: 600; color: var(--text-2); margin-bottom: 4px; }
     .qd-upload-hint  { font-size: .78rem; color: var(--text-3); }
 
-    .qd-preview-img {
+    .qd-preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 8px;
+    }
+
+    .qd-preview-thumb {
       width: 100%;
-      max-height: 280px;
+      aspect-ratio: 1;
       object-fit: cover;
-      display: block;
-    }
-
-    .qd-preview-overlay {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0,0,0,.4);
-      color: #fff;
-      font-weight: 600;
-      opacity: 0;
-      transition: opacity .2s;
-    }
-    .qd-upload-zone:hover .qd-preview-overlay { opacity: 1; }
-
-    .qd-upload-progress {
-      font-family: 'DM Mono', monospace;
-      font-size: .9rem;
+      border-radius: calc(var(--radius) - 2px);
     }
 
     .qd-waiting {
@@ -225,11 +241,10 @@ export class QuestDetailComponent implements OnInit {
   participants = signal<Participant[]>([]);
   loading = signal(true);
   uploading = signal(false);
-  uploadProgress = signal(0);
   uploadSuccess = signal(false);
   error = signal('');
-  selectedFile = signal<File | null>(null);
-  previewUrl = signal<string | null>(null);
+  selectedFiles = signal<File[]>([]);
+  previewUrls = signal<string[]>([]);
 
   constructor(
     private route: ActivatedRoute,
@@ -267,25 +282,36 @@ export class QuestDetailComponent implements OnInit {
   }
 
   onFileSelected(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-    this.selectedFile.set(file);
-    const reader = new FileReader();
-    reader.onload = e => this.previewUrl.set(e.target?.result as string);
-    reader.readAsDataURL(file);
+    const files = Array.from((event.target as HTMLInputElement).files ?? []);
+    if (files.length === 0) return;
+    if (files.length > 5) {
+      this.error.set('Please select up to 5 photos.');
+      return;
+    }
+    this.error.set('');
+    this.selectedFiles.set(files);
+    const previews: string[] = new Array(files.length);
+    let loaded = 0;
+    files.forEach((file, i) => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        previews[i] = e.target?.result as string;
+        if (++loaded === files.length) this.previewUrls.set([...previews]);
+      };
+      reader.readAsDataURL(file);
+    });
   }
 
   async complete() {
-    const file = this.selectedFile();
-    if (!file) return;
+    const files = this.selectedFiles();
+    if (files.length === 0) return;
     this.uploading.set(true);
     this.error.set('');
-    this.uploadProgress.set(0);
     try {
-      const url = await this.uploadToCloudinary(file);
-      await this.questService.completeQuest(this.groupId, this.questId, url);
+      const urls = await Promise.all(files.map(f => this.uploadToCloudinary(f)));
+      await this.questService.completeQuest(this.groupId, this.questId, urls);
       this.quest.update(q =>
-        q ? { ...q, status: 'completed', proofPhotoUrl: url, completedAt: new Date() } : q,
+        q ? { ...q, status: 'completed', proofPhotoUrl: urls[0], proofPhotoUrls: urls, completedAt: new Date() } : q,
       );
       this.uploadSuccess.set(true);
     } catch (e: any) {
@@ -307,11 +333,6 @@ export class QuestDetailComponent implements OnInit {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`);
-      xhr.upload.onprogress = e => {
-        if (e.lengthComputable) {
-          this.uploadProgress.set(Math.round((e.loaded / e.total) * 100));
-        }
-      };
       xhr.onload  = () => xhr.status === 200
         ? resolve(JSON.parse(xhr.responseText).secure_url)
         : reject(new Error('Cloudinary upload failed.'));
