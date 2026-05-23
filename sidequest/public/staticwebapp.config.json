@@ -5,6 +5,8 @@
       "/assets/*",
       "/favicon.ico",
       "/manifest.webmanifest",
+      "/ngsw.json",
+      "/icons/*",
       "/*.css",
       "/*.js",
       "/*.png",
