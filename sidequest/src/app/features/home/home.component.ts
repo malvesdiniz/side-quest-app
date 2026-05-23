@@ -53,15 +53,17 @@ import {
         </p>
       </div>
 
-      <!-- ── Auth resolving ── -->
+      <!-- ── Exactly one auth state is visible at a time ── -->
       @if (authService.loading()) {
+
+        <!-- 1. Loading -->
         <div class="home__card sq-card home__card--center">
           <span class="home__spinner home__spinner--dark"></span>
         </div>
-      }
 
-      <!-- ── NOT signed in ── -->
-      @if (!authService.loading() && !authService.currentUser()) {
+      } @else if (!authService.currentUser()) {
+
+        <!-- 2. Logged out -->
         <div class="home__card sq-card">
           <div class="home__card-header">
             <span class="home__card-icon"><lucide-icon name="log-in" [size]="22" /></span>
@@ -90,10 +92,11 @@ import {
 
           <p class="home__auth-hint">Your groups will appear here after signing in.</p>
         </div>
-      }
 
-      <!-- ── Signed in ── -->
-      @if (!authService.loading() && authService.currentUser()) {
+      } @else {
+
+        <!-- 3. Logged in -->
+
         <!-- Create group card -->
         <div class="home__card sq-card">
           <div class="home__card-header">
@@ -163,64 +166,66 @@ import {
             <button class="sq-btn sq-btn--ghost" (click)="openGroup()">Open group</button>
           </div>
         </div>
-      }
 
-      <!-- My groups card -->
-      <div class="home__card sq-card">
-        <div class="home__card-header">
-          <span class="home__card-icon"><lucide-icon name="users" [size]="22" /></span>
-          <h2 class="home__card-title">Your groups</h2>
-        </div>
-
-        <!-- User row -->
-        <div class="home__user-row">
-          @if (authService.currentUser()!.photoURL) {
-            <img
-              class="home__user-photo"
-              [src]="authService.currentUser()!.photoURL!"
-              [alt]="authService.currentUser()!.displayName ?? ''"
-            />
-          } @else {
-            <span class="home__user-avatar">
-              {{
-                initials(
-                  authService.currentUser()!.displayName ?? authService.currentUser()!.email ?? '?'
-                )
-              }}
-            </span>
-          }
-          <div class="home__user-meta">
-            <span class="home__user-name">{{
-              authService.currentUser()!.displayName ?? 'Google user'
-            }}</span>
-            <span class="home__user-email">{{ authService.currentUser()!.email }}</span>
+        <!-- My groups card — only rendered when currentUser() is guaranteed non-null -->
+        <div class="home__card sq-card">
+          <div class="home__card-header">
+            <span class="home__card-icon"><lucide-icon name="users" [size]="22" /></span>
+            <h2 class="home__card-title">Your groups</h2>
           </div>
-          <button class="home__sign-out" (click)="signOut()">Sign out</button>
-        </div>
 
-        <div class="home__divider"></div>
-
-        <!-- Groups list -->
-        @if (groupsLoading()) {
-          <div class="home__list-loading">
-            <span class="home__spinner home__spinner--dark"></span>
-          </div>
-        } @else if (userGroups().length === 0) {
-          <div class="home__group-empty">
-            <lucide-icon name="compass" [size]="32" />
-            <p>You are not in any groups yet.<br />Open a group link to get started.</p>
-          </div>
-        } @else {
-          <div class="home__groups-list">
-            @for (g of userGroups(); track g.groupId) {
-              <button class="home__group-item" (click)="goToGroup(g.groupId)">
-                <span class="home__group-name">{{ g.groupName }}</span>
-                <lucide-icon name="chevron-right" [size]="16" class="home__group-chevron" />
-              </button>
+          <!-- User row -->
+          <div class="home__user-row">
+            @if (authService.currentUser()!.photoURL) {
+              <img
+                class="home__user-photo"
+                [src]="authService.currentUser()!.photoURL!"
+                [alt]="authService.currentUser()!.displayName ?? ''"
+                referrerpolicy="no-referrer"
+              />
+            } @else {
+              <span class="home__user-avatar">
+                {{
+                  initials(
+                    authService.currentUser()!.displayName ?? authService.currentUser()!.email ?? '?'
+                  )
+                }}
+              </span>
             }
+            <div class="home__user-meta">
+              <span class="home__user-name">{{
+                authService.currentUser()!.displayName ?? 'Google user'
+              }}</span>
+              <span class="home__user-email">{{ authService.currentUser()!.email }}</span>
+            </div>
+            <button class="home__sign-out" (click)="signOut()">Sign out</button>
           </div>
-        }
-      </div>
+
+          <div class="home__divider"></div>
+
+          <!-- Groups list -->
+          @if (groupsLoading()) {
+            <div class="home__list-loading">
+              <span class="home__spinner home__spinner--dark"></span>
+            </div>
+          } @else if (userGroups().length === 0) {
+            <div class="home__group-empty">
+              <lucide-icon name="compass" [size]="32" />
+              <p>You are not in any groups yet.<br />Open a group link to get started.</p>
+            </div>
+          } @else {
+            <div class="home__groups-list">
+              @for (g of userGroups(); track g.groupId) {
+                <button class="home__group-item" (click)="goToGroup(g.groupId)">
+                  <span class="home__group-name">{{ g.groupName }}</span>
+                  <lucide-icon name="chevron-right" [size]="16" class="home__group-chevron" />
+                </button>
+              }
+            </div>
+          }
+        </div>
+
+      }
     </div>
   `,
   styles: [
@@ -671,6 +676,11 @@ export class HomeComponent implements OnInit {
   async signOut(): Promise<void> {
     await this.authService.signOut();
     this.userGroups.set([]);
+    this.groupName = '';
+    this.joinInput = '';
+    this.createError.set('');
+    this.joinError.set('');
+    this.authError.set('');
   }
 
   parseGroupId(input: string): string {
