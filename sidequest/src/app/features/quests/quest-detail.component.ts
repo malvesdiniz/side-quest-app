@@ -71,6 +71,14 @@ import { environment } from '../../../environments/environment';
           </div>
         }
 
+        <!-- Check-in comment (completed quests) -->
+        @if (quest()!.proofComment) {
+          <div class="qd-comment-card">
+            <div class="sq-label" style="margin-bottom:8px">Check-in comment</div>
+            <p class="qd-comment-body">{{ quest()!.proofComment }}</p>
+          </div>
+        }
+
         <!-- Complete quest section -->
         @if (quest()!.status === 'pending' && isAssignee()) {
           <hr class="sq-divider">
@@ -99,6 +107,15 @@ import { environment } from '../../../environments/environment';
           </div>
           <input #fileInput type="file" accept="image/*" multiple style="display:none"
                  (change)="onFileSelected($event)" />
+
+          <div style="margin-top:14px">
+            <label class="sq-label" style="display:block;margin-bottom:6px">Comment</label>
+            <textarea class="qd-comment-input"
+                      [value]="comment()"
+                      (input)="onCommentInput($event)"
+                      placeholder="Add a short note about how it went..."
+                      rows="3"></textarea>
+          </div>
 
           <button class="sq-btn sq-btn--primary" style="margin-top:14px"
                   [disabled]="selectedFiles().length === 0 || uploading()"
@@ -227,6 +244,42 @@ import { environment } from '../../../environments/environment';
       border-radius: calc(var(--radius) - 2px);
     }
 
+    .qd-comment-card {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 24px;
+    }
+
+    .qd-comment-body {
+      margin: 0;
+      font-size: .9rem;
+      color: var(--text-2);
+      line-height: 1.65;
+      white-space: pre-wrap;
+    }
+
+    .qd-comment-input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-2);
+      color: var(--text);
+      font-size: .9rem;
+      font-family: inherit;
+      line-height: 1.6;
+      resize: vertical;
+      transition: border-color .15s;
+    }
+    .qd-comment-input:focus {
+      outline: none;
+      border-color: var(--amber);
+    }
+    .qd-comment-input::placeholder { color: var(--text-3); }
+
     .qd-waiting {
       text-align: center;
       color: var(--text-2);
@@ -245,6 +298,7 @@ export class QuestDetailComponent implements OnInit {
   error = signal('');
   selectedFiles = signal<File[]>([]);
   previewUrls = signal<string[]>([]);
+  comment = signal('');
 
   constructor(
     private route: ActivatedRoute,
@@ -302,16 +356,28 @@ export class QuestDetailComponent implements OnInit {
     });
   }
 
+  onCommentInput(event: Event): void {
+    this.comment.set((event.target as HTMLTextAreaElement).value);
+  }
+
   async complete() {
     const files = this.selectedFiles();
     if (files.length === 0) return;
     this.uploading.set(true);
     this.error.set('');
+    const proofComment = this.comment().trim();
     try {
       const urls = await Promise.all(files.map(f => this.uploadToCloudinary(f)));
-      await this.questService.completeQuest(this.groupId, this.questId, urls);
+      await this.questService.completeQuest(this.groupId, this.questId, urls, proofComment);
       this.quest.update(q =>
-        q ? { ...q, status: 'completed', proofPhotoUrl: urls[0], proofPhotoUrls: urls, completedAt: new Date() } : q,
+        q ? {
+          ...q,
+          status: 'completed',
+          proofPhotoUrl: urls[0],
+          proofPhotoUrls: urls,
+          proofComment: proofComment || undefined,
+          completedAt: new Date(),
+        } : q,
       );
       this.uploadSuccess.set(true);
     } catch (e: any) {
