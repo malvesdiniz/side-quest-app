@@ -124,6 +124,14 @@ export class ParticipantService {
     return ref.id;
   }
 
+  async updateParticipantPhoto(
+    groupId: string,
+    participantId: string,
+    photoUrl: string,
+  ): Promise<void> {
+    await updateDoc(doc(this.col(groupId), participantId), { photoUrl });
+  }
+
   async linkParticipantToUser(groupId: string, participantId: string, user: User): Promise<void> {
     const ref = doc(this.col(groupId), participantId);
     const snap = await getDoc(ref);
