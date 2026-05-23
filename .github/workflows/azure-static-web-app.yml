@@ -1,0 +1,43 @@
+name: Deploy SideQuest to Azure Static Web Apps
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        working-directory: sidequest
+        run: npm ci
+
+      - name: Build Angular app
+        working-directory: sidequest
+        run: npm run build
+
+      - name: Show dist output
+        run: |
+          echo "Listing dist:"
+          find sidequest/dist -maxdepth 4 -type f
+
+      - name: Deploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: "upload"
+          app_location: "sidequest/dist/sidequest/browser"
+          api_location: ""
+          output_location: ""
+          skip_app_build: true
