@@ -2,6 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule, LUCIDE_ICONS, LucideIconProvider, X, Dice5 } from 'lucide-angular';
 import { ConsequenceService } from '../../core/services/consequence.service';
 import { QuestService } from '../../core/services/quest.service';
 import { ParticipantService } from '../../core/services/participant.service';
@@ -14,7 +15,10 @@ import { getCurrentMonth, formatMonth } from '../../core/utils/date.utils';
 @Component({
   selector: 'app-consequences',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, LucideAngularModule],
+  providers: [
+    { provide: LUCIDE_ICONS, multi: true, useValue: new LucideIconProvider({ X, Dice5 }) },
+  ],
   template: `
     <div class="page">
       <a class="back-link" [routerLink]="['/group', groupId]">← Back</a>
@@ -26,11 +30,22 @@ import { getCurrentMonth, formatMonth } from '../../core/utils/date.utils';
       <div class="sq-section-title">Consequence pool ({{ consequences().length }})</div>
       <div class="sq-card" style="margin-bottom:20px">
         <div class="row" style="gap:10px;margin-bottom:12px">
-          <input type="text" placeholder="e.g. Wear a costume for a day"
-                 [(ngModel)]="newConsequence" (keydown.enter)="addConsequence()" />
-          <button class="sq-btn sq-btn--primary cn-add-btn"
-                  (click)="addConsequence()" [disabled]="addingConsequence()">
-            @if (addingConsequence()) { … } @else { + }
+          <input
+            type="text"
+            placeholder="e.g. Wear a costume for a day"
+            [(ngModel)]="newConsequence"
+            (keydown.enter)="addConsequence()"
+          />
+          <button
+            class="sq-btn sq-btn--primary cn-add-btn"
+            (click)="addConsequence()"
+            [disabled]="addingConsequence()"
+          >
+            @if (addingConsequence()) {
+              …
+            } @else {
+              +
+            }
           </button>
         </div>
         @if (consequences().length === 0) {
@@ -40,14 +55,16 @@ import { getCurrentMonth, formatMonth } from '../../core/utils/date.utils';
             @for (c of consequences(); track c.id) {
               <div class="cn-pool-item">
                 <span class="cn-pool-text">{{ c.text }}</span>
-                <button class="cn-remove" (click)="removeConsequence(c)">✕</button>
+                <button class="cn-remove" (click)="removeConsequence(c)">
+                  <lucide-icon name="x" [size]="14" />
+                </button>
               </div>
             }
           </div>
         }
       </div>
 
-      <hr class="sq-divider">
+      <hr class="sq-divider" />
 
       <!-- Failed participants -->
       <div class="sq-section-title">Failed participants</div>
@@ -57,18 +74,37 @@ import { getCurrentMonth, formatMonth } from '../../core/utils/date.utils';
       } @else {
         <div class="stack">
           @for (p of participants(); track p.id) {
-            <div class="sq-card cn-participant-card"
-                 [class.cn-participant-card--failed]="completedCount(p.id) < (group()?.minQuestsToComplete ?? 5)">
+            <div
+              class="sq-card cn-participant-card"
+              [class.cn-participant-card--failed]="
+                completedCount(p.id) < (group()?.minQuestsToComplete ?? 5)
+              "
+            >
               <div class="row row--between" style="margin-bottom:10px">
                 <div class="row" style="gap:10px">
-                  <span class="cn-avatar"
-                        [class.cn-avatar--failed]="completedCount(p.id) < (group()?.minQuestsToComplete ?? 5)">
-                    {{ initials(p.name) }}
+                  <span
+                    class="cn-avatar"
+                    [class.cn-avatar--failed]="
+                      completedCount(p.id) < (group()?.minQuestsToComplete ?? 5)
+                    "
+                  >
+                    @if (p.photoUrl) {
+                      <img
+                        class="dash__avatar dash__avatar--photo"
+                        [src]="p.photoUrl"
+                        [alt]="p.name"
+                      />
+                    } @else {
+                      <span class="dash__avatar dash__avatar--sm">
+                        {{ initials(p.name) }}
+                      </span>
+                    }
                   </span>
                   <div>
                     <div class="cn-name">{{ p.name }}</div>
                     <div class="cn-count">
-                      {{ completedCount(p.id) }} / {{ group()?.minQuestsToComplete ?? 5 }} quests completed
+                      {{ completedCount(p.id) }} / {{ group()?.minQuestsToComplete ?? 5 }} quests
+                      completed
                     </div>
                   </div>
                 </div>
@@ -84,13 +120,19 @@ import { getCurrentMonth, formatMonth } from '../../core/utils/date.utils';
                   <div class="cn-drawn">
                     <div class="sq-label">Drawn consequence</div>
                     <p class="cn-drawn-text">{{ drawn.consequenceText }}</p>
-                    <div class="cn-drawn-date">Drawn {{ drawn.drawnAt | date:'short' }}</div>
+                    <div class="cn-drawn-date">Drawn {{ drawn.drawnAt | date: 'short' }}</div>
                   </div>
                 } @else {
-                  <button class="sq-btn sq-btn--danger cn-draw-btn"
-                          [disabled]="drawingFor() === p.id || consequences().length === 0"
-                          (click)="drawConsequence(p)">
-                    @if (drawingFor() === p.id) { Drawing… } @else { 🎲 &nbsp; Draw Consequence }
+                  <button
+                    class="sq-btn sq-btn--danger cn-draw-btn"
+                    [disabled]="drawingFor() === p.id || consequences().length === 0"
+                    (click)="drawConsequence(p)"
+                  >
+                    @if (drawingFor() === p.id) {
+                      Drawing…
+                    } @else {
+                      <lucide-icon name="dice-5" [size]="16" /> Draw Consequence
+                    }
                   </button>
                   @if (consequences().length === 0) {
                     <p class="cn-no-pool">Add consequences to the pool first.</p>
@@ -103,87 +145,175 @@ import { getCurrentMonth, formatMonth } from '../../core/utils/date.utils';
       }
     </div>
   `,
-  styles: [`
-    .back-link {
-      display: inline-block;
-      color: var(--text-2);
-      margin-bottom: 20px;
-      font-size: .9rem;
-    }
+  styles: [
+    `
+      .back-link {
+        display: inline-block;
+        color: var(--text-2);
+        margin-bottom: 20px;
+        font-size: 0.9rem;
+      }
 
-    .cn-add-btn {
-      width: auto;
-      flex-shrink: 0;
-      padding: 12px 18px;
-    }
+      .cn-add-btn {
+        width: auto;
+        flex-shrink: 0;
+        padding: 12px 18px;
+      }
 
-    .cn-pool-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .cn-pool-item:last-child { border-bottom: none; }
+      .cn-pool-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .cn-pool-item:last-child {
+        border-bottom: none;
+      }
 
-    .cn-pool-text { color: var(--text-2); font-size: .95rem; }
+      .cn-pool-text {
+        color: var(--text-2);
+        font-size: 0.95rem;
+      }
 
-    .cn-remove {
-      background: none;
-      color: var(--text-3);
-      font-size: .85rem;
-      padding: 4px 7px;
-      border-radius: var(--radius-sm);
-      transition: color .15s, background .15s;
-    }
-    .cn-remove:hover {
-      color: var(--red);
-      background: var(--red-dim);
-    }
+      .cn-remove {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        color: var(--text-3);
+        padding: 4px 7px;
+        border-radius: var(--radius-sm);
+        transition:
+          color 0.15s,
+          background 0.15s;
+      }
+      .cn-remove:hover {
+        color: var(--red);
+        background: var(--red-dim);
+      }
 
-    .cn-participant-card { background: var(--bg-2); }
-    .cn-participant-card--failed {
-      border-color: rgba(224,92,92,.3);
-      background: rgba(224,92,92,.04);
-    }
+      .cn-participant-card {
+        background: var(--bg-2);
+      }
+      .cn-participant-card--failed {
+        border-color: rgba(224, 92, 92, 0.3);
+        background: rgba(224, 92, 92, 0.04);
+      }
 
-    .cn-avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: var(--amber-glow);
-      border: 1.5px solid var(--amber-dim);
-      color: var(--amber);
-      font-weight: 700;
-      font-size: .85rem;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .cn-avatar--failed {
-      background: var(--red-dim);
-      border-color: var(--red);
-      color: var(--red);
-    }
+      .cn-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--amber-glow);
+        border: 1.5px solid var(--amber-dim);
+        color: var(--amber);
+        font-weight: 700;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .cn-avatar--failed {
+        background: var(--red-dim);
+        border-color: var(--red);
+        color: var(--red);
+      }
 
-    .cn-name  { font-weight: 600; }
-    .cn-count { font-size: .8rem; color: var(--text-3); }
+      .cn-name {
+        font-weight: 600;
+      }
+      .cn-count {
+        font-size: 0.8rem;
+        color: var(--text-3);
+      }
 
-    .cn-draw-btn  { margin-top: 4px; }
-    .cn-no-pool   { font-size: .8rem; color: var(--text-3); margin-top: 8px; }
+      .cn-draw-btn {
+        margin-top: 4px;
+      }
+      .cn-no-pool {
+        font-size: 0.8rem;
+        color: var(--text-3);
+        margin-top: 8px;
+      }
 
-    .cn-drawn {
-      background: var(--bg-3);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 12px 14px;
-      margin-top: 4px;
-    }
-    .cn-drawn-text { font-size: 1rem; font-weight: 600; color: var(--red); margin: 4px 0; }
-    .cn-drawn-date { font-size: .75rem; color: var(--text-3); }
-  `],
+      .cn-drawn {
+        background: var(--bg-3);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 12px 14px;
+        margin-top: 4px;
+      }
+      .cn-drawn-text {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--red);
+        margin: 4px 0;
+      }
+      .cn-drawn-date {
+        font-size: 0.75rem;
+        color: var(--text-3);
+      }
+      .dash__avatar--photo {
+        width: 32px;
+        height: 32px;
+        object-fit: cover;
+        border: 2px solid var(--border);
+        background: var(--surface-2);
+      }
+      .dash__avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: var(--amber-light, #fff3cc);
+        border: 2px solid var(--amber, #f0a500);
+        color: var(--amber-dark, #b97d0a);
+        font-weight: 800;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .dash__avatar--sm {
+        width: 32px;
+        height: 32px;
+        font-size: 0.72rem;
+      }
+
+      .dash__avatar--photo {
+        width: 32px;
+        height: 32px;
+        object-fit: cover;
+        border: 2px solid var(--border);
+        background: var(--surface-2);
+      }
+
+      .dash__prog-card {
+        padding: 16px;
+      }
+
+      .dash__prog-name {
+        font-weight: 600;
+      }
+      .dash__avatar--sm {
+        width: 32px;
+        height: 32px;
+        font-size: 0.72rem;
+      }
+
+      .dash__avatar--photo {
+        width: 32px;
+        height: 32px;
+        object-fit: cover;
+        border: 2px solid var(--border);
+        background: var(--surface-2);
+      }
+    `,
+  ],
 })
 export class ConsequencesComponent implements OnInit {
   groupId!: string;
@@ -211,81 +341,83 @@ export class ConsequencesComponent implements OnInit {
     this.load();
   }
 
- async load() {
-  this.loading.set(true);
-  const month = getCurrentMonth();
+  async load() {
+    this.loading.set(true);
+    const month = getCurrentMonth();
 
-  console.log('[Consequences] Loading groupId:', this.groupId);
-  console.log('[Consequences] month:', month);
-
-  try {
-    const group = await this.groupService.getGroup(this.groupId);
-    console.log('[Consequences] group:', group);
-    this.group.set(group);
-
-    if (!group) {
-      console.warn('[Consequences] Group not found');
-      return;
-    }
-
-    let participants: Participant[] = [];
+    console.log('[Consequences] Loading groupId:', this.groupId);
+    console.log('[Consequences] month:', month);
 
     try {
-      participants = await this.participantService.getParticipants(this.groupId);
-      console.log('[Consequences] participants:', participants);
-      this.participants.set(participants);
-    } catch (err) {
-      console.error('[Consequences] Error loading participants:', err);
-      this.participants.set([]);
-    }
+      const group = await this.groupService.getGroup(this.groupId);
+      console.log('[Consequences] group:', group);
+      this.group.set(group);
 
-    try {
-      const consequences = await this.consequenceService.getConsequences(this.groupId);
-      console.log('[Consequences] consequences:', consequences);
-      this.consequences.set(consequences);
-    } catch (err) {
-      console.error('[Consequences] Error loading consequences:', err);
-      this.consequences.set([]);
-    }
-
-    try {
-      const drawn = await this.consequenceService.getDrawnConsequencesByMonth(this.groupId, month);
-      console.log('[Consequences] drawn consequences:', drawn);
-      this.drawnConsequences.set(drawn);
-    } catch (err) {
-      console.error('[Consequences] Error loading drawn consequences:', err);
-      this.drawnConsequences.set([]);
-    }
-
-    const counts = new Map<string, number>();
-
-    for (const p of participants) {
-      try {
-        const n = await this.questService.countCompletedQuests(this.groupId, p.id, month);
-        counts.set(p.id, n);
-      } catch (err) {
-        console.error(`[Consequences] Error counting completed quests for ${p.name}:`, err);
-        counts.set(p.id, 0);
+      if (!group) {
+        console.warn('[Consequences] Group not found');
+        return;
       }
+
+      let participants: Participant[] = [];
+
+      try {
+        participants = await this.participantService.getParticipants(this.groupId);
+        console.log('[Consequences] participants:', participants);
+        this.participants.set(participants);
+      } catch (err) {
+        console.error('[Consequences] Error loading participants:', err);
+        this.participants.set([]);
+      }
+
+      try {
+        const consequences = await this.consequenceService.getConsequences(this.groupId);
+        console.log('[Consequences] consequences:', consequences);
+        this.consequences.set(consequences);
+      } catch (err) {
+        console.error('[Consequences] Error loading consequences:', err);
+        this.consequences.set([]);
+      }
+
+      try {
+        const drawn = await this.consequenceService.getDrawnConsequencesByMonth(
+          this.groupId,
+          month,
+        );
+        console.log('[Consequences] drawn consequences:', drawn);
+        this.drawnConsequences.set(drawn);
+      } catch (err) {
+        console.error('[Consequences] Error loading drawn consequences:', err);
+        this.drawnConsequences.set([]);
+      }
+
+      const counts = new Map<string, number>();
+
+      for (const p of participants) {
+        try {
+          const n = await this.questService.countCompletedQuests(this.groupId, p.id, month);
+          counts.set(p.id, n);
+        } catch (err) {
+          console.error(`[Consequences] Error counting completed quests for ${p.name}:`, err);
+          counts.set(p.id, 0);
+        }
+      }
+
+      console.log('[Consequences] completed counts:', counts);
+      this.completedCounts.set(counts);
+    } catch (err) {
+      console.error('[Consequences] Error loading page:', err);
+      this.group.set(null);
+    } finally {
+      this.loading.set(false);
     }
-
-    console.log('[Consequences] completed counts:', counts);
-    this.completedCounts.set(counts);
-
-  } catch (err) {
-    console.error('[Consequences] Error loading page:', err);
-    this.group.set(null);
-  } finally {
-    this.loading.set(false);
   }
-}
 
   completedCount(participantId: string): number {
     return this.completedCounts().get(participantId) ?? 0;
   }
 
   drawnForParticipant(participantId: string): DrawnConsequence | null {
-    return this.drawnConsequences().find(d => d.participantId === participantId) ?? null;
+    return this.drawnConsequences().find((d) => d.participantId === participantId) ?? null;
   }
 
   async addConsequence() {
@@ -294,7 +426,7 @@ export class ConsequencesComponent implements OnInit {
     this.addingConsequence.set(true);
     try {
       const id = await this.consequenceService.addConsequence(this.groupId, text);
-      this.consequences.update(list => [...list, { id, text, createdAt: new Date() }]);
+      this.consequences.update((list) => [...list, { id, text, createdAt: new Date() }]);
       this.newConsequence = '';
     } finally {
       this.addingConsequence.set(false);
@@ -303,7 +435,7 @@ export class ConsequencesComponent implements OnInit {
 
   async removeConsequence(c: Consequence) {
     await this.consequenceService.removeConsequence(this.groupId, c.id);
-    this.consequences.update(list => list.filter(x => x.id !== c.id));
+    this.consequences.update((list) => list.filter((x) => x.id !== c.id));
   }
 
   async drawConsequence(p: Participant) {
@@ -311,15 +443,22 @@ export class ConsequencesComponent implements OnInit {
     this.drawingFor.set(p.id);
     try {
       const drawn = await this.consequenceService.drawConsequenceForParticipant(
-        this.groupId, p.id, getCurrentMonth(),
+        this.groupId,
+        p.id,
+        getCurrentMonth(),
       );
-      if (drawn) this.drawnConsequences.update(list => [...list, drawn]);
+      if (drawn) this.drawnConsequences.update((list) => [...list, drawn]);
     } finally {
       this.drawingFor.set(null);
     }
   }
 
   initials(name: string): string {
-    return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    return name
+      .split(' ')
+      .map((w) => w[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   }
 }

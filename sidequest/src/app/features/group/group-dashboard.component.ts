@@ -1,6 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { LucideAngularModule, LUCIDE_ICONS, LucideIconProvider, Compass, Link, Check, LockKeyhole, Users, ScrollText, Dice5 } from 'lucide-angular';
 
 import { AuthService } from '../../core/services/auth.service';
 import { GroupService } from '../../core/services/group.service';
@@ -13,18 +14,22 @@ import { Quest } from '../../core/models/quest.model';
 
 import { getCurrentMonth, formatMonth } from '../../core/utils/date.utils';
 import { ParticipantService } from '../../core/services/participant.service';
+import { UserGroupService } from '../../core/services/user-group.service';
 
 @Component({
   selector: 'app-group-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, LucideAngularModule],
+  providers: [
+    { provide: LUCIDE_ICONS, multi: true, useValue: new LucideIconProvider({ Compass, Link, Check, LockKeyhole, Users, ScrollText, Dice5 }) },
+  ],
   template: `
     <div class="page">
       @if (loading()) {
         <div class="sq-spinner"></div>
       } @else if (!group()) {
         <div class="sq-empty">
-          <div class="icon">🗺️</div>
+          <div class="icon"><lucide-icon name="compass" [size]="48" /></div>
           <h2>Group not found</h2>
           <p>Check your link and try again.</p>
         </div>
@@ -37,11 +42,7 @@ import { ParticipantService } from '../../core/services/participant.service';
           </div>
 
           <button class="dash__share" (click)="copyLink()" title="Copy invite link">
-            @if (copied()) {
-              ✅
-            } @else {
-              🔗
-            }
+            <lucide-icon [name]="copied() ? 'check' : 'link'" [size]="20" />
           </button>
         </div>
 
@@ -50,7 +51,7 @@ import { ParticipantService } from '../../core/services/participant.service';
           <!-- Not signed in -->
           @if (!authService.currentUser()) {
             <div class="dash__auth-prompt">
-              <div class="dash__auth-icon">🔐</div>
+              <div class="dash__auth-icon"><lucide-icon name="lock-keyhole" [size]="36" /></div>
               <p class="dash__auth-title">Sign in to join this group</p>
               <p class="dash__auth-sub">Use your Google account to track your quests.</p>
 
@@ -129,7 +130,7 @@ import { ParticipantService } from '../../core/services/participant.service';
                   <span class="dash__btn-spinner"></span>
                   Joining…
                 } @else {
-                  👋 &nbsp; Join as {{ authService.currentUser()!.displayName ?? 'me' }}
+                  Join as {{ authService.currentUser()!.displayName ?? 'me' }}
                 }
               </button>
             </div>
@@ -206,7 +207,7 @@ import { ParticipantService } from '../../core/services/participant.service';
 
           @if (participants().length === 0) {
             <div class="sq-empty">
-              <div class="icon">👥</div>
+              <div class="icon"><lucide-icon name="users" [size]="48" /></div>
               <p>No one here yet.</p>
               <a
                 [routerLink]="['/group', groupId, 'participants']"
@@ -225,7 +226,7 @@ import { ParticipantService } from '../../core/services/participant.service';
 
         <div class="stack">
           <a class="sq-btn sq-btn--primary" [routerLink]="['/group', groupId, 'quests', 'new']">
-            📜 &nbsp; Create a Quest
+            <lucide-icon name="scroll-text" [size]="18" /> Create a Quest
           </a>
 
           <a class="sq-btn sq-btn--ghost" [routerLink]="['/group', groupId, 'quests']">
@@ -233,7 +234,7 @@ import { ParticipantService } from '../../core/services/participant.service';
           </a>
 
           <a class="sq-btn sq-btn--ghost" [routerLink]="['/group', groupId, 'consequences']">
-            🎲 &nbsp; Draw consequences
+            <lucide-icon name="dice-5" [size]="18" /> Draw consequences
           </a>
         </div>
       }
@@ -249,16 +250,23 @@ import { ParticipantService } from '../../core/services/participant.service';
       }
 
       .dash__share {
-        font-size: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
         cursor: pointer;
-        padding: 8px;
+        padding: 6px;
         background: none;
         border: none;
-        transition: transform 0.15s;
+        border-radius: var(--radius-sm);
+        color: var(--text-2);
+        transition: transform 0.15s, color 0.15s;
       }
 
       .dash__share:hover {
-        transform: scale(1.15);
+        transform: scale(1.1);
+        color: var(--amber-dark);
       }
 
       .dash__who {
@@ -271,8 +279,10 @@ import { ParticipantService } from '../../core/services/participant.service';
       }
 
       .dash__auth-icon {
-        font-size: 2rem;
+        display: flex;
+        justify-content: center;
         margin-bottom: 10px;
+        color: var(--text-3);
       }
 
       .dash__auth-title {
@@ -497,6 +507,7 @@ export class GroupDashboardComponent implements OnInit {
     private questService: QuestService,
     private groupService: GroupService,
     private cpService: CurrentParticipantService,
+    private userGroupService: UserGroupService,
   ) {}
 
   ngOnInit(): void {
@@ -650,6 +661,9 @@ export class GroupDashboardComponent implements OnInit {
           this.participants.update((list) => [...list, updated]);
         }
       }
+
+      const groupName = this.group()?.name ?? '';
+      await this.userGroupService.addUserGroup(user.uid, this.groupId, groupName, participantId);
     } catch (e: any) {
       this.authError.set(e?.message ?? 'Could not join the group. Please try again.');
     } finally {

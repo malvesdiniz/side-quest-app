@@ -19,9 +19,12 @@ import { User } from 'firebase/auth';
 import { firestore } from '../firebase/firebase';
 import { toDate } from '../utils/date.utils';
 import { Participant } from '../models/participant.model';
+import { Group } from '../models/group.model';
+import { GroupService } from './group.service';
 
 @Injectable({ providedIn: 'root' })
 export class ParticipantService {
+  constructor(private groupService: GroupService) {}
   private col(groupId: string) {
     return collection(firestore, 'groups', groupId, 'participants');
   }
@@ -60,6 +63,33 @@ export class ParticipantService {
     await deleteDoc(doc(this.col(groupId), participantId));
   }
 
+  async removeParticipantAndTransferOwnership(
+    groupId: string,
+    participantIdToRemove: string,
+    currentParticipant: Participant,
+    group: Group,
+  ): Promise<void> {
+    const isOwner = group.ownerParticipantId === currentParticipant.id;
+    const isSelf = currentParticipant.id === participantIdToRemove;
+
+    if (!isSelf && !isOwner) {
+      throw new Error('You are not allowed to remove this participant.');
+    }
+
+    const participants = await this.getParticipants(groupId);
+    await this.removeParticipant(groupId, participantIdToRemove);
+
+    if (participantIdToRemove === group.ownerParticipantId) {
+      const remaining = participants.filter((p) => p.id !== participantIdToRemove);
+      if (remaining.length > 0) {
+        const newOwner = remaining[0];
+        await this.groupService.updateGroupOwner(groupId, newOwner.id, newOwner.userId ?? null);
+      } else {
+        await this.groupService.updateGroupOwner(groupId, null, null);
+      }
+    }
+  }
+
   async getParticipantByUserId(groupId: string, userId: string): Promise<Participant | null> {
     const q = query(this.col(groupId), where('userId', '==', userId));
     const snap = await getDocs(q);
@@ -85,6 +115,11 @@ export class ParticipantService {
       photoUrl: user.photoURL ?? null,
       createdAt: serverTimestamp(),
     });
+
+    const group = await this.groupService.getGroup(groupId);
+    if (!group?.ownerParticipantId) {
+      await this.groupService.updateGroupOwner(groupId, ref.id, user.uid);
+    }
 
     return ref.id;
   }

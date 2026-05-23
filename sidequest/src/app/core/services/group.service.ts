@@ -31,6 +31,8 @@ export class GroupService {
       createdAt: toDate(d['createdAt']),
       minQuestsToComplete: d['minQuestsToComplete'] ?? 5,
       maxQuestsPerParticipant: d['maxQuestsPerParticipant'] ?? 10,
+      ownerParticipantId: d['ownerParticipantId'] ?? null,
+      ownerUserId: d['ownerUserId'] ?? null,
     };
   }
 
@@ -74,5 +76,13 @@ export class GroupService {
     changes: Partial<Pick<Group, 'name' | 'minQuestsToComplete' | 'maxQuestsPerParticipant'>>,
   ): Promise<void> {
     await updateDoc(doc(this.col, groupId), { ...changes });
+  }
+
+  async updateGroupOwner(
+    groupId: string,
+    ownerParticipantId: string | null,
+    ownerUserId: string | null,
+  ): Promise<void> {
+    await updateDoc(doc(this.col, groupId), { ownerParticipantId, ownerUserId });
   }
 }

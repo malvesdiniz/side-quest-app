@@ -2,6 +2,7 @@ import { Component, OnInit, signal, computed } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule, LUCIDE_ICONS, LucideIconProvider, ScrollText } from 'lucide-angular';
 import { QuestService } from '../../core/services/quest.service';
 import { ParticipantService } from '../../core/services/participant.service';
 import { CurrentParticipantService } from '../../core/services/current-participant.service';
@@ -14,7 +15,10 @@ type Filter = 'all' | 'mine' | 'pending' | 'completed';
 @Component({
   selector: 'app-quest-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, LucideAngularModule],
+  providers: [
+    { provide: LUCIDE_ICONS, multi: true, useValue: new LucideIconProvider({ ScrollText }) },
+  ],
   template: `
     <div class="page">
       <a class="back-link" [routerLink]="['/group', groupId]">← Back</a>
@@ -42,7 +46,7 @@ type Filter = 'all' | 'mine' | 'pending' | 'completed';
         <div class="sq-spinner"></div>
       } @else if (filtered().length === 0) {
         <div class="sq-empty">
-          <div class="icon">📜</div>
+          <div class="icon"><lucide-icon name="scroll-text" [size]="48" /></div>
           <p>No quests match this filter.</p>
           <a [routerLink]="['/group', groupId, 'quests', 'new']" style="margin-top:14px;display:block">
             Create the first quest →

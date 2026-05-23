@@ -2,30 +2,49 @@ import { Component, signal } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs/operators';
+import { LucideAngularModule, LUCIDE_ICONS, LucideIconProvider, House, Map, ScrollText, Users, Dice5 } from 'lucide-angular';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule, LucideAngularModule],
+  providers: [
+    { provide: LUCIDE_ICONS, multi: true, useValue: new LucideIconProvider({ House, Map, ScrollText, Users, Dice5 }) },
+  ],
   template: `
     <div class="app-shell">
       <router-outlet />
       @if (groupId()) {
         <nav class="bottom-nav">
           <a class="bottom-nav__item"
+             [routerLink]="['/']"
+             routerLinkActive="bottom-nav__item--active"
+             [routerLinkActiveOptions]="{ exact: true }">
+            <span class="bottom-nav__bubble">
+              <span class="bottom-nav__icon">
+                <lucide-icon name="house" [size]="20" />
+              </span>
+            </span>
+            <span class="bottom-nav__label">Home</span>
+          </a>
+          <a class="bottom-nav__item"
              [routerLink]="['/group', groupId()]"
              routerLinkActive="bottom-nav__item--active"
              [routerLinkActiveOptions]="{ exact: true }">
             <span class="bottom-nav__bubble">
-              <span class="bottom-nav__icon">⚔️</span>
+              <span class="bottom-nav__icon">
+                <lucide-icon name="map" [size]="20" />
+              </span>
             </span>
-            <span class="bottom-nav__label">Home</span>
+            <span class="bottom-nav__label">Group</span>
           </a>
           <a class="bottom-nav__item"
              [routerLink]="['/group', groupId(), 'quests']"
              routerLinkActive="bottom-nav__item--active">
             <span class="bottom-nav__bubble">
-              <span class="bottom-nav__icon">📜</span>
+              <span class="bottom-nav__icon">
+                <lucide-icon name="scroll-text" [size]="20" />
+              </span>
             </span>
             <span class="bottom-nav__label">Quests</span>
           </a>
@@ -33,7 +52,9 @@ import { filter } from 'rxjs/operators';
              [routerLink]="['/group', groupId(), 'participants']"
              routerLinkActive="bottom-nav__item--active">
             <span class="bottom-nav__bubble">
-              <span class="bottom-nav__icon">👥</span>
+              <span class="bottom-nav__icon">
+                <lucide-icon name="users" [size]="20" />
+              </span>
             </span>
             <span class="bottom-nav__label">Party</span>
           </a>
@@ -41,7 +62,9 @@ import { filter } from 'rxjs/operators';
              [routerLink]="['/group', groupId(), 'consequences']"
              routerLinkActive="bottom-nav__item--active">
             <span class="bottom-nav__bubble">
-              <span class="bottom-nav__icon">🎲</span>
+              <span class="bottom-nav__icon">
+                <lucide-icon name="dice-5" [size]="20" />
+              </span>
             </span>
             <span class="bottom-nav__label">Fate</span>
           </a>
@@ -101,14 +124,15 @@ import { filter } from 'rxjs/operators';
     }
 
     .bottom-nav__icon {
-      font-size: 1.3rem;
-      line-height: 1;
-      display: block;
-      transition: transform .18s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #b5a090;
+      transition: transform .18s ease, color .18s;
     }
 
     .bottom-nav__label {
-      font-size: .65rem;
+      font-size: .6rem;
       font-weight: 700;
       letter-spacing: .04em;
       color: #b5a090;
@@ -124,6 +148,7 @@ import { filter } from 'rxjs/operators';
 
     .bottom-nav__item--active .bottom-nav__icon {
       transform: scale(1.15);
+      color: #b97d0a;
     }
 
     .bottom-nav__item--active .bottom-nav__label {
